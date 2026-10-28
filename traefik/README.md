@@ -9,7 +9,49 @@ carpeta_del_usuario
 │   └── certs 
 │   └── config  # Carpeta de configuración de traefik
 │   └── docker-compose.yml
+│   └── scripts
 ```
+
+## Consul Catalog (desarrollo)
+
+Traefik conserva el provider Docker para las aplicaciones existentes y habilita
+Consul Catalog como fuente adicional de servicios. El provider Consul solo acepta
+servicios con el tag `traefik.enable=true`, etiquetas `traefik.*` y comprobaciones
+en estado `passing`.
+
+Consul debe estar iniciado en la red externa `redutn` antes que Traefik. Preparar
+la configuración local ignorada que agrega a Traefik su token de solo lectura:
+
+```powershell
+cd C:\Users\Vale\Desktop\ProyectoDesarrollo\dockers\consul
+docker compose up -d --wait
+
+cd ..\traefik
+.\scripts\prepare-consul-token.ps1
+docker compose config --quiet
+docker compose up -d
+```
+
+El script lee el token `traefik` desde el volumen persistente de Consul y lo inserta
+en `config\traefik.generated.yml`; nunca lo muestra por consola. Ese archivo está
+ignorado por Git y es el único que monta Traefik en lugar del archivo base. Si se
+regeneran los tokens borrando el volumen de Consul, volver a ejecutar el script antes
+de recrear Traefik.
+
+En Consul, el token de Traefik solo puede leer servicios y nodos. No tiene permisos
+para registrar servicios, modificar KV ni administrar ACL. Las aplicaciones y sus
+Compose no cambian en esta etapa; la configuración actual basada en labels Docker
+sigue activa.
+
+Para comprobar la conexión, revisar los logs de Traefik:
+
+```powershell
+docker compose logs --tail 100 reverse-proxy
+```
+
+La integración no registra todavía microservicios; el provider espera entradas en
+Consul Catalog que se implementarán en la etapa siguiente.
+
 # Utilidad para generar Certificados
 Para generar e instalar certificados para desarrollo se puede utilizar **mkcert** 
 1. Descargar mkcert https://github.com/FiloSottile/mkcert/tags

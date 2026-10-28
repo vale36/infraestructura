@@ -12,7 +12,7 @@ services:
             - 27017:27017
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
-            - ./config/traefik.yml:/etc/traefik/traefik.yml:ro
+            - ./config/traefik.generated.yml:/etc/traefik/traefik.yml:ro
             - ./config/config.yml:/etc/traefik/config.yml:ro
             - ./certs:/etc/certs:ro
         networks:

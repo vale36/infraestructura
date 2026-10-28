@@ -11,6 +11,16 @@ providers:
     watch: true
     exposedByDefault: false
 
+  consulCatalog:
+    endpoint:
+      address: "consul:8500"
+      scheme: "http"
+      datacenter: "dc1"
+    refreshInterval: "10s"
+    exposedByDefault: false
+    strictChecks:
+      - "passing"
+
   file:
     filename: /etc/traefik/config.yml
     watch: true
