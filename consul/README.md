@@ -13,8 +13,8 @@ recrearse sin perder datos.
 - Volumen persistente `proyecto-consul-data`.
 - Red Docker compartida `redutn`.
 - Health check sobre el estado del líder antes de crear tokens.
-- Token administrativo, token de UI, token de lectura para Traefik y token de
-  registro para aplicaciones.
+- Tokens separados para administración, UI, Traefik, registro de aplicaciones y
+  descubrimiento del Orquestador.
 
 Los tokens se generan una sola vez y se guardan dentro del volumen persistente,
 con permisos `0600`, bajo `/consul/data/bootstrap`:
@@ -24,6 +24,18 @@ management.token
 ui.token
 traefik.token
 microservices.token
+orchestrator.token
+```
+
+El token de Orquestador usa exclusivamente la política `orchestrator`, que permite
+lectura de los cuatro servicios registrados y no permite escribir en el catálogo,
+los agentes ni el KV:
+
+```text
+validacion-pdf
+extraccion
+persistencia-consultas
+persistencia-actualizaciones
 ```
 
 La interfaz no acepta estos archivos directamente. Hay que leer el token de UI y
@@ -51,6 +63,34 @@ docker compose exec -T consul cat /consul/data/bootstrap/ui.token
 ```
 
 Abrir `http://127.0.0.1:8500/ui/` y acceder con el token leído.
+
+Preparar en el host los archivos locales usados por los contenedores sin mostrarlos
+en consola ni versionarlos:
+
+```powershell
+.\scripts\prepare-microservices-token.ps1
+.\scripts\prepare-orchestrator-token.ps1
+```
+
+Los secretos quedan únicamente en `generated/microservices.token` y
+`generated/orchestrator.token`. El directorio `generated/` está excluido de Git.
+Los scripts comprueban el token actual en Consul antes de sincronizar el archivo,
+por lo que pueden ejecutar nuevamente sin recrear el volumen persistente.
+
+Configurar el Orquestador con el token preparado mediante un montaje de solo
+lectura; no agregue el secreto al Compose versionado:
+
+```text
+CONSUL_HTTP_ADDR=http://consul:8500
+CONSUL_HTTP_TOKEN_FILE=/run/secrets/consul_orchestrator_token
+CONSUL_ENABLED=true
+CONSUL_FALLBACK_ENABLED=false
+```
+
+El montaje real debe usar `./generated/orchestrator.token` como origen y
+`/run/secrets/consul_orchestrator_token` como destino. Si el contenedor consume
+otra ruta, ajuste `CONSUL_HTTP_TOKEN_FILE` a esa ruta. El token no se lee por
+variables de entorno ni se imprime en los logs.
 
 ## Verificación
 

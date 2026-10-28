@@ -15,6 +15,13 @@ if ([string]::IsNullOrWhiteSpace($token) -or $token -match "\s") {
     throw "Consul devolvio un token vacio o invalido."
 }
 
+& docker compose -f $consulComposeFile exec -T consul sh -c `
+    'token=$(cat "$1"); consul acl token read -http-addr=http://127.0.0.1:8500 -token="$token" -self >/dev/null' `
+    sh /consul/data/bootstrap/microservices.token 2>$null
+if ($LASTEXITCODE -ne 0) {
+    throw "El token de microservicios no pertenece al servidor Consul actual. Ejecuta bootstrap ACL sin borrar el volumen."
+}
+
 New-Item -ItemType Directory -Path $generatedDirectory -Force | Out-Null
 [System.IO.File]::WriteAllText($generatedToken, $token, [System.Text.UTF8Encoding]::new($false))
 Write-Host "Token de registro de microservicios preparado; el valor no se muestra."

@@ -54,6 +54,7 @@ class ConsulComposeTests(unittest.TestCase):
             "ui.token",
             "traefik.token",
             "microservices.token",
+            "orchestrator.token",
         ):
             self.assertIn(token_name, script)
 
@@ -69,6 +70,38 @@ class ConsulComposeTests(unittest.TestCase):
         self.assertNotIn('node_prefix "consul-server-dev"', policy)
         self.assertIn('service_prefix ""', policy)
         self.assertIn('key_prefix "config/"', policy)
+
+    def test_orchestrator_acl_policy_only_reads_registered_microservices(self):
+        policy_path = ROOT / "config/policies/orchestrator.hcl"
+        policy = policy_path.read_text(encoding="utf-8")
+        for service_name in (
+            "validacion-pdf",
+            "extraccion",
+            "persistencia-consultas",
+            "persistencia-actualizaciones",
+        ):
+            self.assertIn(f'service_prefix "{service_name}"', policy)
+        self.assertIn('policy = "read"', policy)
+        self.assertNotIn("write", policy.replace('policy = "read"', ""))
+        self.assertNotIn("key_prefix", policy)
+        self.assertNotIn("node_prefix", policy)
+
+    def test_readme_documents_orchestrator_token_and_real_service_names(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("orchestrator.token", readme)
+        self.assertIn("prepare-orchestrator-token.ps1", readme)
+        self.assertIn("extraccion", readme)
+        self.assertNotIn("extraccion-texto", readme)
+
+    def test_token_preparation_scripts_verify_and_prepare_from_live_consul(self):
+        for script_name in (
+            "prepare-microservices-token.ps1",
+            "prepare-orchestrator-token.ps1",
+        ):
+            script = (ROOT / "scripts" / script_name).read_text(encoding="utf-8")
+            self.assertIn("acl token read", script)
+            self.assertIn("-self", script)
+            self.assertIn("generated", script)
 
     def test_agent_token_policy_and_persisted_generated_config_are_present(self):
         policy = (ROOT / "config/policies/consul-agent.hcl").read_text(encoding="utf-8")

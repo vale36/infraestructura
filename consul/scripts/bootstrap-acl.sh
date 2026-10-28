@@ -6,6 +6,7 @@ MANAGEMENT_TOKEN_FILE=$BOOTSTRAP_DIR/management.token
 UI_TOKEN_FILE=$BOOTSTRAP_DIR/ui.token
 TRAEFIK_TOKEN_FILE=$BOOTSTRAP_DIR/traefik.token
 MICROSERVICES_TOKEN_FILE=$BOOTSTRAP_DIR/microservices.token
+ORCHESTRATOR_TOKEN_FILE=$BOOTSTRAP_DIR/orchestrator.token
 AGENT_TOKEN_FILE=$BOOTSTRAP_DIR/consul-agent.token
 AGENT_CONFIG_FILE=/consul/generated-config/consul-agent.hcl
 
@@ -54,7 +55,10 @@ ensure_token() {
   token_description=$2
   policy_name=$3
 
-  if [ -f "$token_file" ]; then
+  if [ -f "$token_file" ] && consul acl token read \
+    -http-addr="$CONSUL_HTTP_ADDR" \
+    -token="$(cat "$token_file")" \
+    -self >/dev/null 2>&1; then
     return
   fi
 
@@ -77,9 +81,11 @@ ensure_token() {
 
 ensure_policy traefik /consul/policies/traefik.hcl
 ensure_policy microservices /consul/policies/microservices.hcl
+ensure_policy orchestrator /consul/policies/orchestrator.hcl
 ensure_policy consul-agent /consul/policies/consul-agent.hcl
 ensure_token "$TRAEFIK_TOKEN_FILE" "Read-only catalog token for Traefik" traefik
 ensure_token "$MICROSERVICES_TOKEN_FILE" "Service registration token for microservices" microservices
+ensure_token "$ORCHESTRATOR_TOKEN_FILE" "Read-only discovery token for the Orchestrator" orchestrator
 ensure_token "$AGENT_TOKEN_FILE" "Agent reconciliation token for Consul" consul-agent
 
 agent_token=$(cat "$AGENT_TOKEN_FILE")
