@@ -4,13 +4,14 @@ services:
   consul:
     image: hashicorp/consul:${CONSUL_VERSION:-1.21.5}
     container_name: consul
-    command: ["agent", "-config-dir=/consul/config"]
+    command: ["agent", "-config-dir=/consul/config", "-config-dir=/consul/generated-config"]
     restart: unless-stopped
     ports:
       - "127.0.0.1:${CONSUL_HTTP_PORT:-8500}:8500"
     volumes:
       - consul_data:/consul/data
       - ./config/consul.hcl:/consul/config/consul.hcl:ro
+      - consul_generated_config:/consul/generated-config:ro
     networks:
       redutn:
         aliases:
@@ -38,6 +39,7 @@ services:
     volumes:
       - consul_data:/consul/data
       - ./scripts/bootstrap-acl.sh:/consul/scripts/bootstrap-acl.sh:ro
+      - consul_generated_config:/consul/generated-config
       - ./config/policies:/consul/policies:ro
     networks:
       - redutn
@@ -53,3 +55,4 @@ networks:
 volumes:
   consul_data:
     name: proyecto-consul-data
+  consul_generated_config:

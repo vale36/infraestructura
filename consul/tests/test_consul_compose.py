@@ -64,6 +64,36 @@ class ConsulComposeTests(unittest.TestCase):
         self.assertIn('default_policy = "deny"', configuration)
         self.assertIn('ui_config', configuration)
 
+    def test_microservices_acl_policy_is_limited_to_services_and_reads(self):
+        policy = (ROOT / "config/policies/microservices.hcl").read_text(encoding="utf-8")
+        self.assertNotIn('node_prefix "consul-server-dev"', policy)
+        self.assertIn('service_prefix ""', policy)
+        self.assertIn('key_prefix "config/"', policy)
+
+    def test_agent_token_policy_and_persisted_generated_config_are_present(self):
+        policy = (ROOT / "config/policies/consul-agent.hcl").read_text(encoding="utf-8")
+        script = (ROOT / "scripts/bootstrap-acl.sh").read_text(encoding="utf-8")
+        ignore = (ROOT / "config/.gitignore").read_text(encoding="utf-8")
+        self.assertIn('node_prefix "consul-server-dev"', policy)
+        self.assertIn('agent_prefix "consul-server-dev"', policy)
+        self.assertIn("/consul/generated-config/consul-agent.hcl", script)
+        self.assertIn("generated/", ignore)
+
+    def test_acl_bootstrap_updates_policy_changes_for_existing_tokens(self):
+        script = (ROOT / "scripts/bootstrap-acl.sh").read_text(encoding="utf-8")
+        self.assertIn("consul acl policy update", script)
+
+    def test_acl_bootstrap_can_persist_agent_config_for_consul(self):
+        volumes = self.services["consul-bootstrap"]["volumes"]
+        generated_mount = next(
+            volume
+            for volume in volumes
+            if volume.get("target") == "/consul/generated-config"
+        )
+        self.assertEqual(generated_mount["type"], "volume")
+        self.assertEqual(generated_mount["source"], "consul_generated_config")
+        self.assertFalse(generated_mount.get("read_only", False))
+
 
 if __name__ == "__main__":
     unittest.main()

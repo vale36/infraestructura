@@ -6,6 +6,8 @@ MANAGEMENT_TOKEN_FILE=$BOOTSTRAP_DIR/management.token
 UI_TOKEN_FILE=$BOOTSTRAP_DIR/ui.token
 TRAEFIK_TOKEN_FILE=$BOOTSTRAP_DIR/traefik.token
 MICROSERVICES_TOKEN_FILE=$BOOTSTRAP_DIR/microservices.token
+AGENT_TOKEN_FILE=$BOOTSTRAP_DIR/consul-agent.token
+AGENT_CONFIG_FILE=/consul/generated-config/consul-agent.hcl
 
 mkdir -p "$BOOTSTRAP_DIR"
 chmod 700 "$BOOTSTRAP_DIR"
@@ -34,6 +36,12 @@ ensure_policy() {
     -token="$management_token" \
     -name="$policy_name" >/dev/null 2>&1; then
     consul acl policy create \
+      -http-addr="$CONSUL_HTTP_ADDR" \
+      -token="$management_token" \
+      -name="$policy_name" \
+      -rules="@$policy_file" >/dev/null
+  else
+    consul acl policy update \
       -http-addr="$CONSUL_HTTP_ADDR" \
       -token="$management_token" \
       -name="$policy_name" \
@@ -69,8 +77,19 @@ ensure_token() {
 
 ensure_policy traefik /consul/policies/traefik.hcl
 ensure_policy microservices /consul/policies/microservices.hcl
+ensure_policy consul-agent /consul/policies/consul-agent.hcl
 ensure_token "$TRAEFIK_TOKEN_FILE" "Read-only catalog token for Traefik" traefik
 ensure_token "$MICROSERVICES_TOKEN_FILE" "Service registration token for microservices" microservices
+ensure_token "$AGENT_TOKEN_FILE" "Agent reconciliation token for Consul" consul-agent
+
+agent_token=$(cat "$AGENT_TOKEN_FILE")
+acl_config=$(printf 'acl {\n  tokens {\n    agent = "%s"\n  }\n}\n' "$agent_token")
+if [ ! -f "$AGENT_CONFIG_FILE" ] || [ "$(cat "$AGENT_CONFIG_FILE")" != "$(printf '%b' "$acl_config")" ]; then
+  umask 077
+  printf '%b' "$acl_config" > "$AGENT_CONFIG_FILE"
+fi
+chown consul:consul "$AGENT_CONFIG_FILE"
+consul reload -http-addr="$CONSUL_HTTP_ADDR" -token="$management_token" >/dev/null
 
 umask 077
 printf '%s\n' "$management_token" > "$UI_TOKEN_FILE"
