@@ -1,0 +1,16 @@
+
+# Variables de entorno y credenciales
+**/.env
+**/.env.*
+!**/.env.example
+
+# Certificados y claves privadas locales
+**/*.pem
+**/*.key
+
+# Ejecutables locales
+**/mkcert.exe
+
+# Archivos temporales de Python
+**/__pycache__/
+**/.pytest_cache/

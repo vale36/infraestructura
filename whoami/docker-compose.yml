@@ -1,0 +1,15 @@
+services:
+  whoami:
+    image: containous/whoami
+    ports:
+      - "8000:8000"
+    networks:
+          - redutn 
+    labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.whoami.rule=Host(`whoami.universidad.localhost`)" #para mongodb seria .tcp.routers.mongodb.rule=Host(`mongodb.universidad.localhost`)
+        - "traefik.http.routers.whoami.tls=true"
+
+networks:
+    redutn:
+        external: true

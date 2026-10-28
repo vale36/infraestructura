@@ -1,0 +1,23 @@
+services:
+  mongodb_cloud:
+    image: mongo:7.0 # Q CHOTA ES MONGO EXPRESS
+    container_name: mongodb_db
+    ports:
+      - "${MONGO_PORT}:27017"
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.mongodb.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.mongodb.entrypoints=mongodb"
+      - "traefik.tcp.services.mongodb.loadbalancer.server.port=27017"
+    volumes:
+      - ./data:/data/db  
+    networks:
+      - redutn
+
+networks:
+  redutn:
+    external: true

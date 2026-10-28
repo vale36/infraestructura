@@ -1,0 +1,55 @@
+name: consul-infra
+
+services:
+  consul:
+    image: hashicorp/consul:${CONSUL_VERSION:-1.21.5}
+    container_name: consul
+    command: ["agent", "-config-dir=/consul/config"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${CONSUL_HTTP_PORT:-8500}:8500"
+    volumes:
+      - consul_data:/consul/data
+      - ./config/consul.hcl:/consul/config/consul.hcl:ro
+    networks:
+      redutn:
+        aliases:
+          - consul
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - 'wget -q -O - http://127.0.0.1:8500/v1/status/leader | grep -q .'
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+
+  consul-bootstrap:
+    image: hashicorp/consul:${CONSUL_VERSION:-1.21.5}
+    entrypoint: ["/bin/sh", "/consul/scripts/bootstrap-acl.sh"]
+    depends_on:
+      consul:
+        condition: service_healthy
+    environment:
+      CONSUL_HTTP_ADDR: http://consul:8500
+      CONSUL_DATACENTER: ${CONSUL_DATACENTER:-dc1}
+    volumes:
+      - consul_data:/consul/data
+      - ./scripts/bootstrap-acl.sh:/consul/scripts/bootstrap-acl.sh:ro
+      - ./config/policies:/consul/policies:ro
+    networks:
+      - redutn
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  redutn:
+    external: true
+    name: redutn
+
+volumes:
+  consul_data:
+    name: proyecto-consul-data
