@@ -13,3 +13,8 @@ service_prefix "persistencia-consultas" {
 service_prefix "persistencia-actualizaciones" {
   policy = "read"
 }
+
+# Consul exige leer el nodo asociado para responder Health/Catalog con el servicio.
+node_prefix "" {
+  policy = "read"
+}

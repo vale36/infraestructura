@@ -83,8 +83,9 @@ class ConsulComposeTests(unittest.TestCase):
             self.assertIn(f'service_prefix "{service_name}"', policy)
         self.assertIn('policy = "read"', policy)
         self.assertNotIn("write", policy.replace('policy = "read"', ""))
+        self.assertIn('node_prefix ""', policy)
+        self.assertIn('policy = "read"', policy)
         self.assertNotIn("key_prefix", policy)
-        self.assertNotIn("node_prefix", policy)
 
     def test_readme_documents_orchestrator_token_and_real_service_names(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
