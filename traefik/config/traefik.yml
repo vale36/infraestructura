@@ -22,7 +22,7 @@ providers:
       - "passing"
 
   file:
-    filename: /etc/traefik/config.yml
+    filename: /etc/traefik/config/config.yml
     watch: true
 
 
