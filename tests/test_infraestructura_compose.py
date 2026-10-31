@@ -31,12 +31,10 @@ class InfraestructuraComposeTests(unittest.TestCase):
     def test_traefik_starts_after_the_acl_bootstrap_left_its_token(self):
         dependency = self.services["reverse-proxy"]["depends_on"]["consul-bootstrap"]
         self.assertEqual(dependency["condition"], "service_completed_successfully")
-        generated = [
-            volume
-            for volume in self.services["reverse-proxy"]["volumes"]
-            if volume["target"] == "/etc/traefik/traefik.yml"
-        ]
-        self.assertTrue(generated[0]["source"].endswith("traefik.generated.yml"))
+        self.assertIn(
+            "--configFile=/etc/traefik/config/traefik.generated.yml",
+            self.services["reverse-proxy"]["command"],
+        )
 
     def test_everything_shares_the_redutn_network(self):
         for name, service in self.services.items():

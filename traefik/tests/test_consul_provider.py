@@ -37,14 +37,18 @@ class ConsulProviderTests(unittest.TestCase):
 
     def test_consul_catalog_token_is_loaded_from_generated_config(self):
         service = self.configuration["services"]["reverse-proxy"]
-        generated_config = next(
+        # Se monta la carpeta y no el archivo: si traefik.generated.yml todavía no
+        # existe cuando Docker crea el contenedor, montar el archivo suelto hace que
+        # Docker cree una carpeta con ese nombre y el bootstrap ya no puede escribirlo.
+        config_dir = next(
             volume
             for volume in service["volumes"]
-            if volume["target"] == "/etc/traefik/traefik.yml"
+            if volume["target"] == "/etc/traefik/config"
         )
-        self.assertEqual(
-            generated_config["source"],
-            str(ROOT / "config/traefik.generated.yml"),
+        self.assertEqual(config_dir["source"], str(ROOT / "config"))
+        self.assertTrue(config_dir["read_only"])
+        self.assertIn(
+            "--configFile=/etc/traefik/config/traefik.generated.yml", service["command"]
         )
 
         static_configuration = (ROOT / "config/traefik.yml").read_text(
