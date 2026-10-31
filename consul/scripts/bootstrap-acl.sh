@@ -105,8 +105,11 @@ printf '%s\n' "$management_token" > "$UI_TOKEN_FILE"
 # mismo que los scripts prepare-*.ps1, para que la infraestructura se levante con un
 # solo `docker compose up`.
 if [ -d /consul/host-generated ]; then
-  cp "$MICROSERVICES_TOKEN_FILE" /consul/host-generated/microservices.token
-  cp "$ORCHESTRATOR_TOKEN_FILE" /consul/host-generated/orchestrator.token
+  # cat y no cp: sobre las carpetas compartidas de Docker Desktop (Windows) cp falla con
+  # "File exists" cuando el archivo se borró hace poco desde el host.
+  cat "$MICROSERVICES_TOKEN_FILE" > /consul/host-generated/microservices.token
+  cat "$ORCHESTRATOR_TOKEN_FILE" > /consul/host-generated/orchestrator.token
+  chmod 644 /consul/host-generated/microservices.token /consul/host-generated/orchestrator.token
 fi
 if [ -f /traefik-config/traefik.yml ]; then
   traefik_token=$(cat "$TRAEFIK_TOKEN_FILE")
