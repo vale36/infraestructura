@@ -100,4 +100,20 @@ consul reload -http-addr="$CONSUL_HTTP_ADDR" -token="$management_token" >/dev/nu
 umask 077
 printf '%s\n' "$management_token" > "$UI_TOKEN_FILE"
 
+# Archivos para el host, sin mostrar los valores: los microservicios y el Orquestador
+# reciben su token como Docker secret y Traefik lee su configuración generada. Hace lo
+# mismo que los scripts prepare-*.ps1, para que la infraestructura se levante con un
+# solo `docker compose up`.
+if [ -d /consul/host-generated ]; then
+  cp "$MICROSERVICES_TOKEN_FILE" /consul/host-generated/microservices.token
+  cp "$ORCHESTRATOR_TOKEN_FILE" /consul/host-generated/orchestrator.token
+fi
+if [ -f /traefik-config/traefik.yml ]; then
+  traefik_token=$(cat "$TRAEFIK_TOKEN_FILE")
+  awk -v token="$traefik_token" '
+    { print }
+    /^      datacenter: "dc1"/ { print "      token: \"" token "\"" }
+  ' /traefik-config/traefik.yml > /traefik-config/traefik.generated.yml
+fi
+
 printf '%s\n' "Consul ACL infrastructure is ready; tokens are stored in $BOOTSTRAP_DIR"
