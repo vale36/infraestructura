@@ -129,5 +129,28 @@ class ConsulComposeTests(unittest.TestCase):
         self.assertFalse(generated_mount.get("read_only", False))
 
 
+    def test_bootstrap_leaves_the_host_files_ready_without_extra_scripts(self):
+        # Con un solo `docker compose up` de la infraestructura: el bootstrap deja los
+        # tokens de microservicios y Orquestador (Docker secrets) y la configuración de
+        # Traefik con su token, como hacen los scripts prepare-*.ps1.
+        targets = {
+            volume["target"]: volume
+            for volume in self.services["consul-bootstrap"]["volumes"]
+        }
+        self.assertEqual(targets["/consul/host-generated"]["type"], "bind")
+        self.assertTrue(
+            targets["/consul/host-generated"]["source"].replace("\\", "/").endswith("consul/generated")
+        )
+        self.assertEqual(targets["/traefik-config"]["type"], "bind")
+        self.assertTrue(
+            targets["/traefik-config"]["source"].replace("\\", "/").endswith("traefik/config")
+        )
+
+        script = (ROOT / "scripts/bootstrap-acl.sh").read_text(encoding="utf-8")
+        self.assertIn("host-generated/microservices.token", script)
+        self.assertIn("host-generated/orchestrator.token", script)
+        self.assertIn("traefik.generated.yml", script)
+        self.assertNotIn("echo \"$traefik_token", script)
+
 if __name__ == "__main__":
     unittest.main()
