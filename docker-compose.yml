@@ -1,0 +1,26 @@
+# Primera capa del sistema: la infraestructura compartida, en un solo compose.
+#
+#   docker network create redutn      (una sola vez)
+#   docker compose up -d --wait       (desde esta carpeta)
+#
+# Levanta Consul con ACL (el bootstrap crea los tokens y deja en el host los archivos
+# que usan los demás), Traefik, MongoDB y Redis. Recién después se levantan los
+# microservicios, con el segundo compose (repo integracion). Cada componente sigue
+# teniendo su propio compose en su carpeta; este los junta sin repetir su definición.
+name: infraestructura
+
+include:
+  - consul/docker-compose.yml
+  - mongodb/docker-compose.yml
+  - redis/docker-compose.yml
+
+services:
+  # Traefik se extiende (no se incluye) para agregarle el orden de arranque: espera a que
+  # el bootstrap de Consul haya dejado traefik.generated.yml con su token de solo lectura.
+  reverse-proxy:
+    extends:
+      file: traefik/docker-compose.yml
+      service: reverse-proxy
+    depends_on:
+      consul-bootstrap:
+        condition: service_completed_successfully
