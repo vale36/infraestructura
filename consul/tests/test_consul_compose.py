@@ -152,5 +152,15 @@ class ConsulComposeTests(unittest.TestCase):
         self.assertIn("traefik.generated.yml", script)
         self.assertNotIn("echo \"$traefik_token", script)
 
+    def test_host_token_files_are_readable_by_the_services_unprivileged_user(self):
+        # Los microservicios corren como appuser y reciben el archivo como Docker secret:
+        # con el umask 077 del bootstrap no lo podrían leer y no arrancarían.
+        script = (ROOT / "scripts/bootstrap-acl.sh").read_text(encoding="utf-8")
+        self.assertIn(
+            "chmod 644 /consul/host-generated/microservices.token "
+            "/consul/host-generated/orchestrator.token",
+            script,
+        )
+
 if __name__ == "__main__":
     unittest.main()
