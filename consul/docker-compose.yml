@@ -41,6 +41,10 @@ services:
       - ./scripts/bootstrap-acl.sh:/consul/scripts/bootstrap-acl.sh:ro
       - consul_generated_config:/consul/generated-config
       - ./config/policies:/consul/policies:ro
+      # Archivos para el host, ignorados por Git: tokens de microservicios y Orquestador
+      # (Docker secrets) y la configuración de Traefik con su token de solo lectura.
+      - ./generated:/consul/host-generated
+      - ../traefik/config:/traefik-config
     networks:
       - redutn
     restart: "no"

@@ -46,7 +46,7 @@ pegarlo en el acceso por ACL.
 Desde PowerShell:
 
 ```powershell
-cd C:\Users\Vale\Desktop\ProyectoDesarrollo\dockers\consul
+cd dockers\consul
 Copy-Item .env.example .env
 docker network inspect redutn *> $null
 if ($LASTEXITCODE -ne 0) { docker network create redutn }
@@ -125,15 +125,24 @@ Ese último comando elimina el catálogo, las políticas y los tokens. La siguie
 recreación podrá volver a ejecutar el bootstrap de ACL y generará credenciales
 nuevas.
 
-## Repositorios siguientes
+## Cómo lo usan los microservicios
 
-Este Compose todavía no registra microservicios ni cambia Traefik. Antes de avanzar,
-la etapa siguiente deberá revisar:
+Lo normal es no levantar este Compose solo sino con el `docker-compose.yml` de la raíz, que
+levanta toda la infraestructura en orden. El bootstrap deja además en el host, sin
+mostrarlos, `generated/microservices.token`, `generated/orchestrator.token` y
+`../traefik/config/traefik.generated.yml` (lo mismo que hacen los scripts `prepare-*.ps1`).
 
-- Si la aplicación obtiene un token limitado y nunca el token administrativo.
-- Si Consul Catalog reemplaza o acompaña al provider Docker de Traefik.
-- Si cada réplica recibe un identificador único.
-- Si el health check usa un endpoint de readiness que no sea solo liveness.
+- Cada microservicio se registra al arrancar con `microservices.token` (nunca el
+  administrativo) y se desregistra al apagarse. Cada instancia tiene un ID único
+  (`<servicio>-<hostname>`) y su propio health check HTTP sobre `/health`.
+- Las réplicas de `extraccion` se registran con su propia IP: Consul controla la salud de
+  cada una y el Orquestador reparte solo entre las sanas.
+- Los cuatro servicios internos se registran **sin** etiquetas de Traefik, así Consul
+  Catalog no los publica. El único público es el Orquestador, por labels Docker.
+- El Orquestador consulta `/v1/health/service/<nombre>?passing=true` con
+  `orchestrator.token`, de solo lectura.
+- Los registros quedan en el volumen: si Consul se reinicia, los servicios vuelven a figurar
+  sanos sin reiniciarlos (probado el 2026-10-30).
 
 ## Pruebas locales
 

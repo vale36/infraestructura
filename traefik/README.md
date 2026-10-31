@@ -23,7 +23,7 @@ Consul debe estar iniciado en la red externa `redutn` antes que Traefik. Prepara
 la configuración local ignorada que agrega a Traefik su token de solo lectura:
 
 ```powershell
-cd C:\Users\Vale\Desktop\ProyectoDesarrollo\dockers\consul
+cd dockers\consul
 docker compose up -d --wait
 
 cd ..\traefik
@@ -39,9 +39,13 @@ regeneran los tokens borrando el volumen de Consul, volver a ejecutar el script 
 de recrear Traefik.
 
 En Consul, el token de Traefik solo puede leer servicios y nodos. No tiene permisos
-para registrar servicios, modificar KV ni administrar ACL. Las aplicaciones y sus
-Compose no cambian en esta etapa; la configuración actual basada en labels Docker
-sigue activa.
+para registrar servicios, modificar KV ni administrar ACL. El provider Docker sigue
+activo: el Orquestador se publica con labels Docker (`pdf.universidad.localhost`).
+
+Traefik monta la carpeta `config` completa y arranca con
+`--configFile=/etc/traefik/config/traefik.generated.yml`. Se monta la carpeta y no el
+archivo porque, si `traefik.generated.yml` todavía no existe cuando Docker crea el
+contenedor, montar el archivo suelto hace que Docker cree una carpeta con ese nombre.
 
 Para comprobar la conexión, revisar los logs de Traefik:
 
@@ -49,8 +53,8 @@ Para comprobar la conexión, revisar los logs de Traefik:
 docker compose logs --tail 100 reverse-proxy
 ```
 
-La integración no registra todavía microservicios; el provider espera entradas en
-Consul Catalog que se implementarán en la etapa siguiente.
+Los microservicios se registran en Consul sin etiquetas `traefik.*`, así que Consul
+Catalog no publica ninguno: son internos.
 
 # Utilidad para generar Certificados
 Para generar e instalar certificados para desarrollo se puede utilizar **mkcert** 

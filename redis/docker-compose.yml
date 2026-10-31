@@ -1,0 +1,25 @@
+# Redis compartido por las dos persistencias: caché de consultas y lock de
+# actualizaciones. Parte de la primera capa (infraestructura). Es solo caché: corre sin
+# snapshot ni AOF y sin volumen, así arranca vacío y nunca devuelve datos viejos
+# (contrato microservicios-pdf 1.2.0, "Redis").
+services:
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    # Sin puertos en el host: Traefik ya usa 6379 como entrypoint TCP.
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - redutn
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  redutn:
+    external: true
+    name: redutn

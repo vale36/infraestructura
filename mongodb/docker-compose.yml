@@ -1,18 +1,30 @@
+# MongoDB compartida por persistencia-actualizaciones (escribe) y persistencia-consultas
+# (lee). Es parte de la primera capa, la infraestructura: se levanta antes que los
+# microservicios, que la alcanzan por nombre (mongodb:27017) dentro de la red redutn.
 services:
-  mongodb_cloud:
+  mongodb:
     image: mongo:7.0
-    container_name: mongodb_db
-    ports:
-      - "${MONGO_PORT}:27017"
+    container_name: mongodb
     restart: unless-stopped
+    # Sin puertos en el host: Traefik ya usa 27017 como entrypoint TCP.
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - redutn
+    security_opt:
+      - no-new-privileges:true
 
 networks:
   redutn:
     external: true
-  
+    name: redutn
+
 volumes:
   mongo_data:
+    name: proyecto-mongo-data
