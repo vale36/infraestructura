@@ -46,6 +46,11 @@ class InfraestructuraComposeTests(unittest.TestCase):
         self.assertEqual(publicados, {"reverse-proxy", "consul"})
         self.assertEqual(self.services["consul"]["ports"][0]["host_ip"], "127.0.0.1")
 
+    def test_whoami_example_does_not_publish_unused_ports(self):
+        # whoami se usa solo a través de Traefik (labels): publicar el 8000 sobraba.
+        compose = (ROOT / "whoami/docker-compose.yml").read_text(encoding="utf-8")
+        self.assertNotIn("ports:", compose)
+
 
 if __name__ == "__main__":
     unittest.main()

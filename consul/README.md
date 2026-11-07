@@ -13,8 +13,8 @@ recrearse sin perder datos.
 - Volumen persistente `proyecto-consul-data`.
 - Red Docker compartida `redutn`.
 - Health check sobre el estado del líder antes de crear tokens.
-- Tokens separados para administración, UI, Traefik, registro de aplicaciones y
-  descubrimiento del Orquestador.
+- Tokens separados para administración, UI, Traefik, registro de aplicaciones,
+  Orquestador y carga de la configuración en el KV.
 
 Los tokens se generan una sola vez y se guardan dentro del volumen persistente,
 con permisos `0600`, bajo `/consul/data/bootstrap`:
@@ -25,11 +25,13 @@ ui.token
 traefik.token
 microservices.token
 orchestrator.token
+config-loader.token
 ```
 
-El token de Orquestador usa exclusivamente la política `orchestrator`, que permite
-lectura de los cuatro servicios registrados y no permite escribir en el catálogo,
-los agentes ni el KV:
+El token de Orquestador usa exclusivamente la política `orchestrator` (contrato 1.6.0):
+lee los cuatro servicios de abajo, registra **solo** el servicio `orquestador` (con los
+tags de Traefik que lo publican) y lee solo `config/orquestador/` del KV. No escribe en
+el KV ni administra ACL:
 
 ```text
 validacion-pdf
@@ -138,9 +140,17 @@ mostrarlos, `generated/microservices.token`, `generated/orchestrator.token` y
 - Las réplicas de `extraccion` se registran con su propia IP: Consul controla la salud de
   cada una y el Orquestador reparte solo entre las sanas.
 - Los cuatro servicios internos se registran **sin** etiquetas de Traefik, así Consul
-  Catalog no los publica. El único público es el Orquestador, por labels Docker.
+  Catalog no los publica. El único público es el Orquestador: se registra con
+  `orchestrator.token` y lleva como tags las reglas de Traefik (contrato 1.6.0; antes
+  eran labels Docker).
 - El Orquestador consulta `/v1/health/service/<nombre>?passing=true` con
-  `orchestrator.token`, de solo lectura.
+  `orchestrator.token`.
+- **Configuración en el KV** (contrato 1.6.0): cada microservicio lee al arrancar
+  `config/<su nombre>/` (por ejemplo `config/persistencia-consultas/MONGO_URI`). Las
+  claves las escribe `consul-config`, del compose de integración, con
+  `config-loader.token` (política `config-loader`: solo escribe bajo `config/`). Los
+  servicios internos las leen con `microservices.token` (`key_prefix "config/"` de
+  lectura).
 - Los registros quedan en el volumen: si Consul se reinicia, los servicios vuelven a figurar
   sanos sin reiniciarlos (probado el 2026-10-30).
 

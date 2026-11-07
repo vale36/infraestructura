@@ -71,21 +71,37 @@ class ConsulComposeTests(unittest.TestCase):
         self.assertIn('service_prefix ""', policy)
         self.assertIn('key_prefix "config/"', policy)
 
-    def test_orchestrator_acl_policy_only_reads_registered_microservices(self):
+    def test_orchestrator_acl_policy_reads_microservices_and_registers_only_itself(self):
+        # Contrato 1.6.0: el orquestador lee el catálogo, se registra a sí mismo (con
+        # los tags de Traefik) y lee solo su configuración del KV.
         policy_path = ROOT / "config/policies/orchestrator.hcl"
         policy = policy_path.read_text(encoding="utf-8")
+        compact = " ".join(policy.split())
         for service_name in (
             "validacion-pdf",
             "extraccion",
             "persistencia-consultas",
             "persistencia-actualizaciones",
         ):
-            self.assertIn(f'service_prefix "{service_name}"', policy)
-        self.assertIn('policy = "read"', policy)
-        self.assertNotIn("write", policy.replace('policy = "read"', ""))
+            self.assertIn(f'service_prefix "{service_name}" {{ policy = "read" }}', compact)
         self.assertIn('node_prefix ""', policy)
-        self.assertIn('policy = "read"', policy)
-        self.assertNotIn("key_prefix", policy)
+        self.assertIn('service "orquestador" { policy = "write" }', compact)
+        self.assertEqual(policy.count('policy = "write"'), 1)
+        self.assertIn('key_prefix "config/orquestador/" { policy = "read" }', compact)
+
+    def test_config_loader_token_only_writes_the_configuration(self):
+        # El compose de integración carga la configuración en el KV con este token.
+        policy = (ROOT / "config/policies/config-loader.hcl").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('key_prefix "config/" { policy = "write" }', " ".join(policy.split()))
+        self.assertNotIn("service", policy)
+        self.assertNotIn("node", policy)
+
+        script = (ROOT / "scripts/bootstrap-acl.sh").read_text(encoding="utf-8")
+        self.assertIn("ensure_policy config-loader", script)
+        self.assertIn("config-loader.token", script)
+        self.assertIn("host-generated/config-loader.token", script)
 
     def test_readme_documents_orchestrator_token_and_real_service_names(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

@@ -39,8 +39,14 @@ regeneran los tokens borrando el volumen de Consul, volver a ejecutar el script 
 de recrear Traefik.
 
 En Consul, el token de Traefik solo puede leer servicios y nodos. No tiene permisos
-para registrar servicios, modificar KV ni administrar ACL. El provider Docker sigue
-activo: el Orquestador se publica con labels Docker (`pdf.universidad.localhost`).
+para registrar servicios, modificar KV ni administrar ACL. El Orquestador se publica
+por Consul Catalog (contrato 1.6.0): se registra en Consul con los tags de Traefik
+(`Host(pdf.universidad.localhost)`, HTTPS, cortocircuito y límite de tasa), que vienen
+de su configuración en el KV. El provider Docker sigue activo para el panel y `whoami`.
+
+Solo se publican los puertos 80 y 443. Antes también el 6379 y el 27017 como
+entrypoints TCP para Redis y MongoDB, pero ninguno tenía router: los servicios los usan
+por nombre dentro de `redutn` y no hacía falta exponerlos.
 
 Traefik monta la carpeta `config` completa y arranca con
 `--configFile=/etc/traefik/config/traefik.generated.yml`. Se monta la carpeta y no el

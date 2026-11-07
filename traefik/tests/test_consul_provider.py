@@ -28,10 +28,17 @@ class ConsulProviderTests(unittest.TestCase):
         )
         self.assertEqual(docker_socket["source"], "/var/run/docker.sock")
         self.assertTrue(docker_socket["read_only"])
+        # Solo HTTP y HTTPS: MongoDB y Redis no se publican por Traefik (nadie los
+        # usaba; los servicios los llaman por nombre dentro de redutn).
         self.assertEqual(
             {port["published"] for port in service["ports"]},
-            {"80", "443", "6379", "27017"},
+            {"80", "443"},
         )
+        static_configuration = (ROOT / "config/traefik.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn(":6379", static_configuration)
+        self.assertNotIn(":27017", static_configuration)
         self.assertEqual(service["labels"]["traefik.enable"], "true")
         self.assertEqual(service["labels"]["traefik.http.routers.traefik"], "true")
 

@@ -1,8 +1,6 @@
 services:
   whoami:
     image: containous/whoami
-    ports:
-      - "8000:8000"
     networks:
           - redutn 
     labels:
