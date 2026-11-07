@@ -20,7 +20,7 @@ git clone https://github.com/vale36/infraestructura.git dockers
 | Carpeta | Componente | Para qué |
 |---|---|---|
 | `consul/` | Consul + `consul-bootstrap` | Descubrimiento de servicios y health checks, con ACL por defecto en *deny*. El bootstrap crea las políticas y los tokens |
-| `traefik/` | Traefik | Proxy inverso por HTTPS (certificados de `*.universidad.localhost`). Publica solo al orquestador |
+| `traefik/` | Traefik | Proxy inverso por HTTPS (certificados de `*.universidad.localhost`), solo puertos 80 y 443. Publica solo al orquestador, que encuentra en Consul (Consul Catalog) |
 | `mongodb/` | MongoDB 7.0 | Una sola base para las dos persistencias. Datos en el volumen `proyecto-mongo-data` |
 | `redis/` | Redis 7 | Caché de consultas y lock de actualizaciones. Sin persistencia: arranca vacío |
 | `docker-compose.yml` | Todo junto | Incluye los composes de cada carpeta y fija el orden de arranque |
@@ -52,7 +52,9 @@ Orden de arranque, que resuelve el propio compose:
 1. Consul, MongoDB y Redis, hasta quedar sanos.
 2. `consul-bootstrap`: crea las ACL y los tokens (solo la primera vez; después los
    reutiliza) y deja en el host, sin mostrarlos y ignorados por Git:
-   `consul/generated/microservices.token`, `consul/generated/orchestrator.token` y
+   `consul/generated/microservices.token`, `consul/generated/orchestrator.token`,
+   `consul/generated/config-loader.token` (contrato 1.6.0: con él el compose de
+   integración carga la configuración de cada microservicio en el KV) y
    `traefik/config/traefik.generated.yml`.
 3. Traefik, recién cuando el bootstrap terminó bien.
 
