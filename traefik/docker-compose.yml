@@ -9,8 +9,6 @@ services:
         ports:
             - 80:80
             - 443:443
-            - 6379:6379
-            - 27017:27017
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             # La carpeta y no archivos sueltos: traefik.generated.yml lo escribe el
