@@ -70,6 +70,19 @@ class ConsulProviderTests(unittest.TestCase):
         )
         self.assertNotIn("token:", static_configuration)
 
+    def test_dashboard_only_through_its_https_router_and_without_telemetry(self):
+        # api.insecure abre la API y el panel en el puerto 8080 sin pasar por ningún
+        # router; sin él, el panel sale solo por el router de config.yml (HTTPS).
+        static_configuration = (ROOT / "config/traefik.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("insecure: false", static_configuration)
+        self.assertIn("sendAnonymousUsage: false", static_configuration)
+        dynamic_configuration = (ROOT / "config/config.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('service: "api@internal"', dynamic_configuration)
+
     def test_consul_catalog_uses_shared_network_and_minimal_provider_scope(self):
         service = self.configuration["services"]["reverse-proxy"]
         self.assertIn("redutn", service["networks"])
