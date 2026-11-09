@@ -104,9 +104,8 @@ umask 077
 printf '%s\n' "$management_token" > "$UI_TOKEN_FILE"
 
 # Archivos para el host, sin mostrar los valores: los microservicios y el Orquestador
-# reciben su token como Docker secret y Traefik lee su configuración generada. Hace lo
-# mismo que los scripts prepare-*.ps1, para que la infraestructura se levante con un
-# solo `docker compose up`.
+# reciben su token como Docker secret y Traefik lee su configuración generada. Así la
+# infraestructura se levanta con un solo `docker compose up`.
 if [ -d /consul/host-generated ]; then
   # cat y no cp: sobre las carpetas compartidas de Docker Desktop (Windows) cp falla con
   # "File exists" cuando el archivo se borró hace poco desde el host.

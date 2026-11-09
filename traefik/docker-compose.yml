@@ -11,7 +11,7 @@ services:
             - 443:443
         volumes:
             # La carpeta y no archivos sueltos: traefik.generated.yml lo escribe el
-            # bootstrap de Consul (o prepare-consul-token.ps1) y puede no existir todavía
+            # bootstrap de Consul y puede no existir todavía
             # cuando Docker crea el contenedor.
             - ./config:/etc/traefik/config:ro
             - ./certs:/etc/certs:ro

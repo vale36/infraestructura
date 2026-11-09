@@ -8,7 +8,7 @@ services:
     container_name: redis
     restart: unless-stopped
     command: ["redis-server", "--save", "", "--appendonly", "no"]
-    # Sin puertos en el host: Traefik ya usa 6379 como entrypoint TCP.
+    # Sin puertos en el host: los servicios lo usan por nombre dentro de redutn.
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

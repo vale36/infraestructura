@@ -9,40 +9,44 @@ carpeta_del_usuario
 │   └── certs 
 │   └── config  # Carpeta de configuración de traefik
 │   └── docker-compose.yml
-│   └── scripts
 ```
 
-## Consul Catalog (desarrollo)
+## Proveedores: Consul Catalog y archivos
 
-Traefik conserva el provider Docker para las aplicaciones existentes y habilita
-Consul Catalog como fuente adicional de servicios. El provider Consul solo acepta
-servicios con el tag `traefik.enable=true`, etiquetas `traefik.*` y comprobaciones
-en estado `passing`.
+Traefik tiene dos proveedores y ninguno más:
 
-Consul debe estar iniciado en la red externa `redutn` antes que Traefik. Preparar
-la configuración local ignorada que agrega a Traefik su token de solo lectura:
+| Proveedor | De dónde saca las rutas | Qué publica |
+|---|---|---|
+| `consulCatalog` | Los servicios registrados en Consul con el tag `traefik.enable=true`, etiquetas `traefik.*` y health check en `passing` | El orquestador (contrato 1.6.0) |
+| `file` | `config/config.yml` | El panel (`traefik.universidad.localhost`) y los certificados |
+
+No tiene el proveedor Docker ni monta `/var/run/docker.sock`: nadie se publicaba con
+labels, y con el socket montado (aunque sea `:ro`) un Traefik comprometido controla Docker
+y el host.
+
+Consul debe estar iniciado en la red externa `redutn` antes que Traefik. Lo normal es
+levantar todo con el `docker-compose.yml` de la raíz, que arranca Traefik recién cuando el
+bootstrap de Consul terminó:
 
 ```powershell
-cd dockers\consul
+cd dockers
 docker compose up -d --wait
-
-cd ..\traefik
-.\scripts\prepare-consul-token.ps1
-docker compose config --quiet
-docker compose up -d
 ```
 
-El script lee el token `traefik` desde el volumen persistente de Consul y lo inserta
-en `config\traefik.generated.yml`; nunca lo muestra por consola. Ese archivo está
-ignorado por Git y es el único que monta Traefik en lugar del archivo base. Si se
-regeneran los tokens borrando el volumen de Consul, volver a ejecutar el script antes
-de recrear Traefik.
+El bootstrap lee el token `traefik` y lo inserta en `config/traefik.generated.yml`; nunca
+lo muestra por consola. Ese archivo está ignorado por Git y es el único que monta Traefik
+en lugar del archivo base. Si se regeneran los tokens borrando el volumen de Consul, el
+próximo `docker compose up` lo vuelve a escribir.
 
 En Consul, el token de Traefik solo puede leer servicios y nodos. No tiene permisos
 para registrar servicios, modificar KV ni administrar ACL. El Orquestador se publica
 por Consul Catalog (contrato 1.6.0): se registra en Consul con los tags de Traefik
 (`Host(pdf.universidad.localhost)`, HTTPS, cortocircuito y límite de tasa), que vienen
-de su configuración en el KV. El provider Docker sigue activo para el panel y `whoami`.
+de su configuración en el KV.
+
+El panel sale solo por su router HTTPS de `config.yml`: `api.insecure` está en `false`,
+así que el puerto 8080 (la API sin router) queda cerrado. No pide usuario ni contraseña
+(desarrollo). `sendAnonymousUsage` también está en `false`.
 
 Solo se publican los puertos 80 y 443. Antes también el 6379 y el 27017 como
 entrypoints TCP para Redis y MongoDB, pero ninguno tenía router: los servicios los usan
