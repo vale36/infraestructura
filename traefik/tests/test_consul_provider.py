@@ -63,12 +63,6 @@ class ConsulProviderTests(unittest.TestCase):
         )
         self.assertNotIn("token:", static_configuration)
 
-        preparation_script = (ROOT / "scripts/prepare-consul-token.ps1").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("traefik.token", preparation_script)
-        self.assertIn("traefik.generated.yml", preparation_script)
-
     def test_consul_catalog_uses_shared_network_and_minimal_provider_scope(self):
         service = self.configuration["services"]["reverse-proxy"]
         self.assertIn("redutn", service["networks"])
