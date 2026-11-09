@@ -1,9 +1,12 @@
 global:
-  sendAnonymousUsage: true
+  sendAnonymousUsage: false
 
 api:
-  dashboard: true #Esta asi para no obligarnos a ingresar usuario y contraseña cada vez que queramos ingresar a traefik.
-  insecure: true
+  # El panel sale solo por su router HTTPS de config.yml (traefik.universidad.localhost),
+  # sin usuario ni contraseña para no tener que ingresarlos cada vez (desarrollo).
+  # insecure: false cierra el puerto 8080, donde la API quedaba abierta sin router.
+  dashboard: true
+  insecure: false
 
 providers:
   consulCatalog:
