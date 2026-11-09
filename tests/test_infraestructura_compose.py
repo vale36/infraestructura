@@ -46,10 +46,18 @@ class InfraestructuraComposeTests(unittest.TestCase):
         self.assertEqual(publicados, {"reverse-proxy", "consul"})
         self.assertEqual(self.services["consul"]["ports"][0]["host_ip"], "127.0.0.1")
 
-    def test_whoami_example_does_not_publish_unused_ports(self):
-        # whoami se usa solo a través de Traefik (labels): publicar el 8000 sobraba.
-        compose = (ROOT / "whoami/docker-compose.yml").read_text(encoding="utf-8")
-        self.assertNotIn("ports:", compose)
+    def test_no_quedan_restos_sin_uso(self):
+        # Nadie los incluye ni los ejecuta: whoami era el ejemplo de la plantilla,
+        # mongodb_para_despues un compose viejo y los prepare-*.ps1 hacían a mano lo que
+        # ahora hace el bootstrap de Consul con el `docker compose up`.
+        for resto in (
+            "whoami",
+            "mongodb_para_despues",
+            "consul/scripts/prepare-microservices-token.ps1",
+            "consul/scripts/prepare-orchestrator-token.ps1",
+            "traefik/scripts/prepare-consul-token.ps1",
+        ):
+            self.assertFalse((ROOT / resto).exists(), resto)
 
 
 if __name__ == "__main__":

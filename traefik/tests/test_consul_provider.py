@@ -19,15 +19,24 @@ class ConsulProviderTests(unittest.TestCase):
         )
         self.configuration = json.loads(result.stdout)
 
-    def test_existing_docker_provider_and_ports_are_preserved(self):
+    def test_without_docker_provider_nor_docker_socket(self):
+        # Nadie se publica con labels: el orquestador llega por Consul Catalog y el panel
+        # por config.yml. Con el socket montado (aunque sea :ro), un Traefik comprometido
+        # le puede pedir cualquier cosa a Docker y controlar el host.
         service = self.configuration["services"]["reverse-proxy"]
-        docker_socket = next(
-            volume
-            for volume in service["volumes"]
-            if volume["target"] == "/var/run/docker.sock"
+        self.assertNotIn(
+            "/var/run/docker.sock",
+            [volume["target"] for volume in service["volumes"]],
         )
-        self.assertEqual(docker_socket["source"], "/var/run/docker.sock")
-        self.assertTrue(docker_socket["read_only"])
+        self.assertFalse(service.get("labels"))
+        static_configuration = (ROOT / "config/traefik.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("docker:", static_configuration)
+        self.assertNotIn("docker.sock", static_configuration)
+
+    def test_only_http_and_https_are_published(self):
+        service = self.configuration["services"]["reverse-proxy"]
         # Solo HTTP y HTTPS: MongoDB y Redis no se publican por Traefik (nadie los
         # usaba; los servicios los llaman por nombre dentro de redutn).
         self.assertEqual(
@@ -39,8 +48,6 @@ class ConsulProviderTests(unittest.TestCase):
         )
         self.assertNotIn(":6379", static_configuration)
         self.assertNotIn(":27017", static_configuration)
-        self.assertEqual(service["labels"]["traefik.enable"], "true")
-        self.assertEqual(service["labels"]["traefik.http.routers.traefik"], "true")
 
     def test_consul_catalog_token_is_loaded_from_generated_config(self):
         service = self.configuration["services"]["reverse-proxy"]
@@ -63,11 +70,18 @@ class ConsulProviderTests(unittest.TestCase):
         )
         self.assertNotIn("token:", static_configuration)
 
-        preparation_script = (ROOT / "scripts/prepare-consul-token.ps1").read_text(
+    def test_dashboard_only_through_its_https_router_and_without_telemetry(self):
+        # api.insecure abre la API y el panel en el puerto 8080 sin pasar por ningún
+        # router; sin él, el panel sale solo por el router de config.yml (HTTPS).
+        static_configuration = (ROOT / "config/traefik.yml").read_text(
             encoding="utf-8"
         )
-        self.assertIn("traefik.token", preparation_script)
-        self.assertIn("traefik.generated.yml", preparation_script)
+        self.assertIn("insecure: false", static_configuration)
+        self.assertIn("sendAnonymousUsage: false", static_configuration)
+        dynamic_configuration = (ROOT / "config/config.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('service: "api@internal"', dynamic_configuration)
 
     def test_consul_catalog_uses_shared_network_and_minimal_provider_scope(self):
         service = self.configuration["services"]["reverse-proxy"]

@@ -66,18 +66,12 @@ docker compose exec -T consul cat /consul/data/bootstrap/ui.token
 
 Abrir `http://127.0.0.1:8500/ui/` y acceder con el token leído.
 
-Preparar en el host los archivos locales usados por los contenedores sin mostrarlos
-en consola ni versionarlos:
-
-```powershell
-.\scripts\prepare-microservices-token.ps1
-.\scripts\prepare-orchestrator-token.ps1
-```
-
-Los secretos quedan únicamente en `generated/microservices.token` y
-`generated/orchestrator.token`. El directorio `generated/` está excluido de Git.
-Los scripts comprueban el token actual en Consul antes de sincronizar el archivo,
-por lo que pueden ejecutar nuevamente sin recrear el volumen persistente.
+El mismo `docker compose up` deja en el host, sin mostrarlos en consola ni
+versionarlos, los archivos que usan los contenedores: el bootstrap los escribe en
+`generated/microservices.token` y `generated/orchestrator.token`. El directorio
+`generated/` está excluido de Git. El bootstrap comprueba el token actual en Consul
+antes de reescribir cada archivo, así que se puede volver a levantar sin recrear el
+volumen persistente.
 
 Configurar el Orquestador con el token preparado mediante un montaje de solo
 lectura; no agregue el secreto al Compose versionado:
@@ -132,7 +126,7 @@ nuevas.
 Lo normal es no levantar este Compose solo sino con el `docker-compose.yml` de la raíz, que
 levanta toda la infraestructura en orden. El bootstrap deja además en el host, sin
 mostrarlos, `generated/microservices.token`, `generated/orchestrator.token` y
-`../traefik/config/traefik.generated.yml` (lo mismo que hacen los scripts `prepare-*.ps1`).
+`../traefik/config/traefik.generated.yml`.
 
 - Cada microservicio se registra al arrancar con `microservices.token` (nunca el
   administrativo) y se desregistra al apagarse. Cada instancia tiene un ID único

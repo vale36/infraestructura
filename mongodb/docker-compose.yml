@@ -6,7 +6,7 @@ services:
     image: mongo:7.0
     container_name: mongodb
     restart: unless-stopped
-    # Sin puertos en el host: Traefik ya usa 27017 como entrypoint TCP.
+    # Sin puertos en el host: los servicios la usan por nombre dentro de redutn.
     volumes:
       - mongo_data:/data/db
     healthcheck:

@@ -10,17 +10,13 @@ services:
             - 80:80
             - 443:443
         volumes:
-            - /var/run/docker.sock:/var/run/docker.sock:ro
             # La carpeta y no archivos sueltos: traefik.generated.yml lo escribe el
-            # bootstrap de Consul (o prepare-consul-token.ps1) y puede no existir todavía
+            # bootstrap de Consul y puede no existir todavía
             # cuando Docker crea el contenedor.
             - ./config:/etc/traefik/config:ro
             - ./certs:/etc/certs:ro
         networks:
             - redutn 
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.traefik=true"
 networks:
     redutn:
         external: true

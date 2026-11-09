@@ -106,19 +106,8 @@ class ConsulComposeTests(unittest.TestCase):
     def test_readme_documents_orchestrator_token_and_real_service_names(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("orchestrator.token", readme)
-        self.assertIn("prepare-orchestrator-token.ps1", readme)
         self.assertIn("extraccion", readme)
         self.assertNotIn("extraccion-texto", readme)
-
-    def test_token_preparation_scripts_verify_and_prepare_from_live_consul(self):
-        for script_name in (
-            "prepare-microservices-token.ps1",
-            "prepare-orchestrator-token.ps1",
-        ):
-            script = (ROOT / "scripts" / script_name).read_text(encoding="utf-8")
-            self.assertIn("acl token read", script)
-            self.assertIn("-self", script)
-            self.assertIn("generated", script)
 
     def test_agent_token_policy_and_persisted_generated_config_are_present(self):
         policy = (ROOT / "config/policies/consul-agent.hcl").read_text(encoding="utf-8")
@@ -148,7 +137,7 @@ class ConsulComposeTests(unittest.TestCase):
     def test_bootstrap_leaves_the_host_files_ready_without_extra_scripts(self):
         # Con un solo `docker compose up` de la infraestructura: el bootstrap deja los
         # tokens de microservicios y Orquestador (Docker secrets) y la configuración de
-        # Traefik con su token, como hacen los scripts prepare-*.ps1.
+        # Traefik con su token.
         targets = {
             volume["target"]: volume
             for volume in self.services["consul-bootstrap"]["volumes"]

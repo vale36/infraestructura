@@ -91,6 +91,32 @@ python -m unittest discover -s tests -p "test_*.py"     # el compose completo
 for d in consul traefik mongodb redis; do (cd $d && python -m unittest discover -s tests -p "test_*.py"); done
 ```
 
+## Seguridad
+
+Lo que está resuelto:
+
+- **Consul cerrado:** ACL en *deny* y un token con permisos mínimos para cada uno; el de
+  Traefik es de solo lectura.
+- **Secretos fuera de git y de los logs:** tokens como Docker secret; `.env`, `*.pem` y
+  `generated/` ignorados; el bootstrap nunca imprime un token.
+- **Poca superficie:** solo 80 y 443 publicados, y el 80 redirige al 443. La UI de Consul
+  solo en `127.0.0.1`. MongoDB y Redis sin puertos en el host.
+- **Traefik sin `docker.sock`:** sus proveedores son Consul Catalog y el de archivos. Solo
+  publica lo que está marcado (`exposedByDefault: false`) y sano (`strictChecks: passing`).
+  El panel sale solo por su router HTTPS (`api.insecure: false`) y no manda telemetría.
+- `no-new-privileges` en todos los contenedores.
+
+Deuda declarada (desarrollo):
+
+| Qué | Riesgo | Cómo se resolvería |
+|---|---|---|
+| El token de la UI de Consul es el de administración | Quien lo tenga puede todo en Consul | Política de solo lectura para la UI y su propio token |
+| Un token `microservices` compartido por los cuatro servicios internos | Uno comprometido puede registrarse con otro nombre | Un token por servicio con `service "<nombre>" write` |
+| MongoDB y Redis sin contraseña | Cualquier contenedor de `redutn` lee o borra datos | Usuario por servicio en MongoDB y `--requirepass` en Redis, con las claves como secret (cambia la URI de las dos persistencias) |
+| Panel de Traefik sin usuario ni contraseña | Se ven las rutas y servicios | Middleware `basicAuth` en el router del panel |
+| Imágenes con tag de versión menor (`mongo:7.0`, `redis:7`, `traefik:v3.6`) | Dos máquinas pueden bajar versiones distintas | Tag exacto o *digest*, el mismo que se escanea con Grype |
+| Consul por HTTP y un solo servidor | Tokens en texto plano dentro de `redutn`; sin alta disponibilidad | TLS y tres servidores en producción |
+
 ## Problemas conocidos
 
 | Síntoma | Causa y solución |
